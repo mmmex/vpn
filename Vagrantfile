@@ -5,7 +5,6 @@ Vagrant.configure(2) do |config|
     config.vm.define "server" do |server|
     server.vm.hostname = "server.loc"
     server.vm.network "private_network", ip: "192.168.10.10"
-    server.vm.network "forwarded_port", guest: 1207, host: 1207
     end
     config.vm.define "client" do |client|
     client.vm.hostname = "client.loc"
