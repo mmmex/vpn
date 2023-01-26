@@ -1,0 +1,6 @@
+.vscode/
+.vagrant/
+for_client/
+*.log
+*.vdi
+TODO.md

@@ -1,0 +1,13 @@
+---
+- hosts: all
+  become: true
+  tasks:
+  - name: Change config from TUN to TAP interface
+    replace:
+      path: '/etc/openvpn/server.conf'
+      regexp: '^dev tun$'
+      replace: 'dev tap'
+  - name: Restart openvpn unit
+    systemd:
+      name: openvpn@server
+      state: restarted

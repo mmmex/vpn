@@ -1,0 +1,7 @@
+---
+- hosts: server
+  become: true
+  roles:
+    - role: ansible-easyrsa
+    - role: openvpn-server
+      server_rsa: true

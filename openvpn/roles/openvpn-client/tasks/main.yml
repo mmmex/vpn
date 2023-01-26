@@ -1,0 +1,18 @@
+---
+# tasks file for openvpn-client
+- name: Copy static file from server
+  copy:
+    src: '/tmp/server/etc/openvpn/static.key'
+    dest: '/etc/openvpn/static.key'
+    mode: '0400'
+
+- name: Create config openvpn-server
+  template:
+    src: 'server.j2'
+    dest: '/etc/openvpn/server.conf'
+
+- name: Enable and start service openvpn-server
+  systemd:
+    name: openvpn@server
+    enabled: yes
+    state: started

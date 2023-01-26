@@ -1,0 +1,64 @@
+---
+# tasks file for openvpn-server
+- name: Create static key
+  command: "openvpn --genkey --secret /etc/openvpn/static.key"
+  when: simple_ovpn | bool
+
+- name: Store static key on localhost /tmp/server/etc/static.key
+  fetch:
+    src: /etc/openvpn/static.key
+    dest: /tmp
+  when: simple_ovpn | bool
+
+- name: Store ca.crt on localhost /tmp/rsa-demo/server/etc/openvpn/pki/ca.crt
+  fetch:
+    src: /etc/openvpn/pki/ca.crt
+    dest: /tmp/rsa-demo
+  when: server_rsa | bool
+
+- name: Store client.crt on localhost /tmp/rsa-demo/server/etc/openvpn/pki/issued/client.crt
+  fetch:
+    src: /etc/openvpn/pki/issued/client.crt
+    dest: /tmp/rsa-demo
+  when: server_rsa | bool
+
+- name: Store client.key on localhost /tmp/rsa-demo/server/etc/openvpn/pki/private/client.key
+  fetch:
+    src: /etc/openvpn/pki/private/client.key
+    dest: /tmp/rsa-demo
+  when: server_rsa | bool
+
+- name: Create config openvpn-server
+  template:
+    src: 'server.j2'
+    dest: '/etc/openvpn/server.conf'
+  when: simple_ovpn | bool
+
+- name: Create config for client openvpn-server
+  template:
+    src: 'client.j2'
+    dest: '/etc/openvpn/client.conf'
+  when: server_rsa | bool
+
+- name: Store client.conf on localhost /tmp/rsa-demo/server/etc/openvpn/client.conf
+  fetch:
+    src: '/etc/openvpn/client.conf'
+    dest: /tmp/rsa-demo
+  when: server_rsa | bool
+
+- name: Create config openvpn-server
+  template:
+    src: 'server_rsa.j2'
+    dest: '/etc/openvpn/server.conf'
+  when: server_rsa | bool
+  notify: Restart openvpn-server
+
+- name: Add something routes to client config
+  command: echo 'iroute 192.168.33.0 255.255.255.0' > /etc/openvpn/client/client
+  when: server_rsa | bool
+
+- name: Enable and start service openvpn-server
+  systemd:
+    name: openvpn@server
+    enabled: yes
+    state: started

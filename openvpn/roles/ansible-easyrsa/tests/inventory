@@ -1,0 +1,1 @@
+ansible-ubuntu-16.04 ansible_connection=docker

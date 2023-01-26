@@ -1,0 +1,20 @@
+---
+# defaults file for easyrsa
+easyrsa_version: "3.0"
+easyrsa_branch: "release/3.0"
+easyrsa_dest: "/usr/share/easy-rsa/{{ easyrsa_version }}/"
+easyrsa_ca_dest: "/etc/openvpn/"
+
+easyrsa_dn: "cn_only"
+easyrsa_req_country: "RU"
+easyrsa_req_province: "MSK"
+easyrsa_req_city: "Moscow"
+easyrsa_req_org: "LLC Otus"
+easyrsa_req_email: "ca@otus.ru"
+easyrsa_req_ou: "GROUP-202207"
+
+easyrsa_keysize: 2048
+easyrsa_digest: "sha256"
+
+easyrsa_clients:
+  - name: client

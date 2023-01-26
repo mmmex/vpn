@@ -1,0 +1,61 @@
+---
+- name: Install any necessary dependencies
+  yum:
+    name: git
+    state: present
+  become: true
+
+- name: Download easy-rsa from GitHub
+  git:
+    repo: "https://github.com/OpenVPN/easy-rsa.git"
+    dest: "{{ easyrsa_dest }}"
+    version: "{{ easyrsa_branch }}"
+
+- name: "Configure easy-rsa"
+  template:
+    src: vars.j2
+    dest: "{{ easyrsa_dest }}/easyrsa3/vars"
+
+- name: "Initialize pki"
+  command: "/{{ easyrsa_dest }}/easyrsa3/easyrsa init-pki"
+  args:
+    chdir: "{{ easyrsa_ca_dest }}"
+    creates: "{{ easyrsa_ca_dest }}/pki"
+
+- name: "Build CA keys"
+  command: "/{{ easyrsa_dest }}/easyrsa3/easyrsa build-ca nopass"
+  args:
+    chdir: "{{ easyrsa_ca_dest }}"
+    creates: "{{ easyrsa_ca_dest }}/pki/private/ca.key"
+
+- name: "Build the DH (Diffie-Hellman) key"
+  command: "/{{ easyrsa_dest }}/easyrsa3/easyrsa gen-dh"
+  args:
+    chdir: "{{ easyrsa_ca_dest }}"
+    creates: "{{ easyrsa_ca_dest }}/pki/dh.pem"
+
+- name: "Generate the server certificate/key"
+  command: "/{{ easyrsa_dest }}/easyrsa3/easyrsa --req-cn=server gen-req server nopass"
+  args:
+    chdir: "{{ easyrsa_ca_dest }}"
+    creates: "{{ easyrsa_ca_dest }}/pki/private/server.key"
+
+- name: "Get the new CA to sign our server key"
+  command: "/{{ easyrsa_dest }}/easyrsa3/easyrsa sign-req server server"
+  args:
+    chdir: "{{ easyrsa_ca_dest }}"
+    creates: "{{ easyrsa_ca_dest }}/pki/issued/server.crt"
+
+- name: "Create the client keys"
+  command: "/{{ easyrsa_dest }}/easyrsa3/easyrsa --req-cn={{ item.name }} gen-req {{ item.name }} nopass"
+  args:
+    chdir: "{{ easyrsa_ca_dest }}"
+    creates: "{{ easyrsa_ca_dest }}/pki/private/{{ item.name }}.key"
+  with_items: "{{ easyrsa_clients }}"
+
+- name: "Get the certificate authority to sign the client request"
+  command: "/{{ easyrsa_dest }}/easyrsa3/easyrsa sign-req client {{ item.name }}"
+  args:
+    chdir: "{{ easyrsa_ca_dest }}"
+    creates: "{{ easyrsa_ca_dest }}/pki/issued/{{ item.name }}.crt"
+  with_items: "{{ easyrsa_clients }}"
