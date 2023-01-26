@@ -311,6 +311,7 @@ _Ниже приведен примерный перевод части стат
 
 1. Подключаем репозиторий EPEL (Extra Packages for Enterprise Linux): `yum install -y epel-release`
 2. Устанавливаем пакет `ocserv`: `yum install -y ocserv`
+3. Заменяем файл `/usr/sbin/ocserv-genkey` [файлом из репозитория](ocserv-genkey): `cp -f /vagrant/ocserv-genkey /usr/sbin/`
 
 **Настройка:**
 
