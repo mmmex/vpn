@@ -305,6 +305,99 @@ _Ниже приведен примерный перевод части стат
 
 [Android client source](https://gitlab.com/openconnect/ics-openconnect) - Обратите внимание, что в магазине Android нет клиентов openconnect, связанных с нашей командой разработчиков.
 
+### Установка и настройка OpenConnect VPN Server на Centos7
+
+**Установка:**
+
+1. Подключаем репозиторий EPEL (Extra Packages for Enterprise Linux): `yum install -y epel-release`
+2. Устанавливаем пакет `ocserv`: `yum install ocserv`
+
+**Настройка:**
+
+* Все команды выполняются от привилегированного пользователя. Рекомендуется войти в систему с помощью root. Если это невозможно, выполните `su root` или `sudo su`, чтобы получить высшие привилегии.
+
+* Сервер Linux (ВМ server) уже настроен как маршрутизатор ~~и имеет работающий брандмауэр (iptables).~~
+
+```
+Требования:
+
+- сеть 192.168.10.0/24 (макса 255.255.255.0)
+- IP-адрес сервера ocserv: 192.168.10.10
+- имя хоста ocserv: server
+- метод аутентификации, используемый для тестирования: pam
+```
+
+1. Создаем каталог для хранения сертификатов: `mkdir ~/certificates`
+2. Переходим в каталог: `cd ~/certificates`
+3. Создаем шаблоны ЦС:
+
+```bash
+cat >~/certificates/ca.tmpl <<__EOF
+cn = "Otus CA"
+organization = "LLC Otus"
+serial = 1
+expiration_days = 3650
+ca
+signing_key
+cert_signing_key
+crl_signing_key
+__EOF
+```
+
+4. Создаем шаблнон сервера:
+
+```bash
+cat >~/certificates/server.tmpl <<__EOF
+cn = "server"
+organization = "LLC Otus"
+serial = 2
+expiration_days = 3650
+signing_key
+encryption_key
+tls_www_server
+#dns_name = "server.loc"
+ip_address = "192.168.10.10"
+__EOF
+```
+
+5. Сгенерировать ключ ЦС, сертификат ЦС:
+
+```bash
+certtool --generate-privkey --outfile ca-key.pem
+certtool --generate-self-signed --load-privkey ca-key.pem --template ca.tmpl --outfile ca-cert.pem
+```
+
+6. Сгенерировать ключ сервера и сертификат:
+
+```bash
+certtool --generate-privkey --outfile server-key.pem
+certtool --generate-certificate --load-privkey server-key.pem --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem --template server.tmpl --outfile server-cert.pem
+```
+
+7. Копируем сертификаты и кличи сервера:
+
+```bash
+cp server-cert.pem server-key.pem /etc/ocserv/
+cp ca-cert.pem /etc/pki/ocserv/cacerts/
+```
+
+8. Настраиваем файл конфигурации /etc/ocserv/ocserv.conf:
+```bash
+cp /etc/ocserv/ocserv.conf /etc/ocserv/ocserv.conf.backup
+sed -i 's|^isolate-workers = true|#isolate-workers = true|' /etc/ocserv/ocserv.conf
+sed -i 's|^ipv4-network = .*$|ipv4-network = 192.168.10.10/24|' /etc/ocserv/ocserv.conf
+sed -i 's|^dns = .*|dns = 8.8.8.8|' /etc/ocserv/ocserv.conf
+sed -i 's|^route = .*|route = 172.16.0.1/255.255.255.0|' /etc/ocserv/ocserv.conf
+sed -i 's|^server-cert = .*|server-cert = /etc/ocserv/server-cert.pem|' /etc/ocserv/ocserv.conf
+sed -i 's|^server-key = .*|server-key = /etc/ocserv/server-key.pem|' /etc/ocserv/ocserv.conf
+sed -i 's|^ca-cert = .*|ca-cert = /etc/pki/ocserv/cacerts/ca-cert.pem|' /etc/ocserv/ocserv.conf
+```
+
+9. Активируем и запускаем сервис ocserv:
+```bash
+systemctl enable --now ocserv
+```
+
 #### Техническая информация OpenConnect VPN Server
 
 _Ниже приведен примерный перевод с [официальной страницы проекта](http://ocserv.gitlab.io/www/technical.html)_
