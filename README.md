@@ -311,13 +311,13 @@ _Ниже приведен примерный перевод части стат
 
 1. Подключаем репозиторий EPEL (Extra Packages for Enterprise Linux): `yum install -y epel-release`
 2. Устанавливаем пакет `ocserv`: `yum install -y ocserv`
-3. Заменяем файл `/usr/sbin/ocserv-genkey` [файлом из репозитория](ocserv-genkey): `cp -f /vagrant/ocserv-genkey /usr/sbin/`
+3. Заменяем файл /usr/sbin/ocserv-genkey [файлом из репозитория](ocserv-genkey): `cp -f /vagrant/ocserv-genkey /usr/sbin/`
 
 **Настройка:**
 
 * Все команды выполняются от привилегированного пользователя. Рекомендуется войти в систему с помощью root. Если это невозможно, выполните `su root` или `sudo su`, чтобы получить высшие привилегии.
 
-* Сервер Linux (ВМ server) уже настроен как маршрутизатор ~~и имеет работающий брандмауэр (iptables).~~
+* Сервер Linux (ВМ server) уже настроен как маршрутизатор (`sysctl -w net.ipv4.ip_forward=1`) ~~и имеет работающий брандмауэр (iptables).~~
 
 ```
 Требования:
@@ -361,7 +361,7 @@ tls_www_server
 __EOF
 ```
 
-5. Скопировать эти шаблоны в папку `/etc/pki/ocserv/`, позднее при старте сервиса он сам сгенерирует и установит на места:
+5. Скопировать эти шаблоны в папку /etc/pki/ocserv/, позднее при старте сервиса он сам сгенерирует и установит на места:
 
 ```bash
 cp ca.tmpl server.tmpl /etc/pki/ocserv/
