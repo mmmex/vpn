@@ -374,7 +374,7 @@ certtool --generate-privkey --outfile server-key.pem
 certtool --generate-certificate --load-privkey server-key.pem --load-ca-certificate ca-cert.pem --load-ca-privkey ca-key.pem --template server.tmpl --outfile server-cert.pem
 ```
 
-7. Копируем сертификаты и кличи сервера:
+7. Копируем сертификаты и ключи сервера:
 
 ```bash
 cp server-cert.pem server-key.pem /etc/ocserv/
@@ -397,6 +397,12 @@ sed -i 's|^ca-cert = .*|ca-cert = /etc/pki/ocserv/cacerts/ca-cert.pem|' /etc/ocs
 ```bash
 systemctl enable --now ocserv
 ```
+
+**Настройка клиента:**
+
+1. Устанавливаем пакет `openconnect` (в моем случае установлена Linux Mint): `apt install openconnect`
+2. Запускаем: `openconnect 192.168.10.10`
+3. Вводим логин и пароль: `vagrant/vagrant`
 
 #### Техническая информация OpenConnect VPN Server
 
