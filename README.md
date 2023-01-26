@@ -310,7 +310,7 @@ _Ниже приведен примерный перевод части стат
 **Установка:**
 
 1. Подключаем репозиторий EPEL (Extra Packages for Enterprise Linux): `yum install -y epel-release`
-2. Устанавливаем пакет `ocserv`: `yum install ocserv`
+2. Устанавливаем пакет `ocserv`: `yum install -y ocserv`
 
 **Настройка:**
 
@@ -348,7 +348,7 @@ __EOF
 
 ```bash
 cat >~/certificates/server.tmpl <<__EOF
-cn = "server"
+cn = "192.168.10.10"
 organization = "LLC Otus"
 serial = 2
 expiration_days = 3650
@@ -356,9 +356,17 @@ signing_key
 encryption_key
 tls_www_server
 #dns_name = "server.loc"
-ip_address = "192.168.10.10"
+#ip_address = "192.168.10.10"
 __EOF
 ```
+
+5. Скопировать эти шаблоны в папку `/etc/pki/ocserv/`, позднее при старте сервиса он сам сгенерирует и установит на места:
+
+```bash
+cp ca.tmpl server.tmpl /etc/pki/ocserv/
+```
+
+Шаги с 5 по 7 включительно можно пропустить, но я оставлю ручную генерацию ключей и сертификатов:
 
 5. Сгенерировать ключ ЦС, сертификат ЦС:
 
@@ -385,9 +393,12 @@ cp ca-cert.pem /etc/pki/ocserv/cacerts/
 ```bash
 cp /etc/ocserv/ocserv.conf /etc/ocserv/ocserv.conf.backup
 sed -i 's|^isolate-workers = true|#isolate-workers = true|' /etc/ocserv/ocserv.conf
-sed -i 's|^ipv4-network = .*$|ipv4-network = 192.168.10.10/24|' /etc/ocserv/ocserv.conf
+sed -i 's|^ipv4-network = .*$|ipv4-network = 192.168.10.0/24|' /etc/ocserv/ocserv.conf
 sed -i 's|^dns = .*|dns = 8.8.8.8|' /etc/ocserv/ocserv.conf
 sed -i 's|^route = .*|route = 172.16.0.1/255.255.255.0|' /etc/ocserv/ocserv.conf
+#
+# Пропустить следующие три команды если шаблоны ca и server скидывали в папку /etc/pki/ocserv
+#
 sed -i 's|^server-cert = .*|server-cert = /etc/ocserv/server-cert.pem|' /etc/ocserv/ocserv.conf
 sed -i 's|^server-key = .*|server-key = /etc/ocserv/server-key.pem|' /etc/ocserv/ocserv.conf
 sed -i 's|^ca-cert = .*|ca-cert = /etc/pki/ocserv/cacerts/ca-cert.pem|' /etc/ocserv/ocserv.conf
@@ -457,3 +468,5 @@ VPN-сервер OpenConnect — это VPN-сервер интернет-уро
 ![image](https://raw.githubusercontent.com/mmmex/vpn/master/design.png)
 
 ---
+
+[Полезная статья](https://habr.com/ru/post/479034/)
