@@ -5,12 +5,12 @@
 - [X] tap;
 - [X] Прочуствовать разницу.
 - [X] Поднять RAS на базе OpenVPN с клиентскими сертификатами, подключиться с локальной машины на виртуалку.
-- [ ] * Самостоятельно изучить, поднять ocserv и подключиться с хоста к виртуалке
+- [X] * Самостоятельно изучить, поднять ocserv и подключиться с хоста к виртуалке
 - [X] Формат сдачи ДЗ - vagrant + ansible
 
 ### Запуск проекта
 
-* Клонируем репозиторий: `git clone ...`
+* Клонируем репозиторий: `git clone https://github.com/mmmex/vpn.git`
 
 * Переходим в папку и запускаем проект: `cd vpn; vagrant up`
 
@@ -305,13 +305,16 @@ _Ниже приведен примерный перевод части стат
 
 [Android client source](https://gitlab.com/openconnect/ics-openconnect) - Обратите внимание, что в магазине Android нет клиентов openconnect, связанных с нашей командой разработчиков.
 
-### Установка и настройка OpenConnect VPN Server на Centos7
+### Настройка OpenConnect VPN Server на Centos7
 
-**Установка:**
+**Подготовка:**
+
+Если используем ВМ `server` из предыдущего раздела можно пропустить 1й шаг и остановить сервис `openvpn@server`: `systemctl disable --now openvpn@server`, затем продолжаем.
 
 1. Подключаем репозиторий EPEL (Extra Packages for Enterprise Linux): `yum install -y epel-release`
 2. Устанавливаем пакет `ocserv`: `yum install -y ocserv`
-3. Заменяем файл /usr/sbin/ocserv-genkey [файлом из репозитория](ocserv-genkey): `cp -f /vagrant/ocserv-genkey /usr/sbin/`
+3. Заменяем файл /usr/sbin/ocserv-genkey [файлом из репозитория](ocserv/ocserv-genkey): `cp -f /vagrant/ocserv-genkey /usr/sbin/`
+4. Добавляем в файл /etc/hosts хостовой машины строчку: `192.168.10.10 server.loc`
 
 **Настройка:**
 
@@ -322,9 +325,9 @@ _Ниже приведен примерный перевод части стат
 ```
 Требования:
 
-- сеть 192.168.10.0/24 (макса 255.255.255.0)
+- сеть 192.168.250.0/24 (макса 255.255.255.0)
 - IP-адрес сервера ocserv: 192.168.10.10
-- имя хоста ocserv: server
+- имя хоста ocserv: server.loc
 - метод аутентификации, используемый для тестирования: pam
 ```
 
@@ -349,15 +352,14 @@ __EOF
 
 ```bash
 cat >~/certificates/server.tmpl <<__EOF
-cn = "192.168.10.10"
+cn = "VPN Server"
 organization = "LLC Otus"
 serial = 2
 expiration_days = 3650
 signing_key
 encryption_key
 tls_www_server
-#dns_name = "server.loc"
-#ip_address = "192.168.10.10"
+dns_name = "server.loc"
 __EOF
 ```
 
@@ -394,8 +396,9 @@ cp ca-cert.pem /etc/pki/ocserv/cacerts/
 ```bash
 cp /etc/ocserv/ocserv.conf /etc/ocserv/ocserv.conf.backup
 sed -i 's|^isolate-workers = true|#isolate-workers = true|' /etc/ocserv/ocserv.conf
-sed -i 's|^ipv4-network = .*$|ipv4-network = 192.168.10.0/24|' /etc/ocserv/ocserv.conf
+sed -i 's|^ipv4-network = .*$|ipv4-network = 192.168.250.0/24|' /etc/ocserv/ocserv.conf
 sed -i 's|^dns = .*|dns = 8.8.8.8|' /etc/ocserv/ocserv.conf
+# В качестве примера буду отправлять один маршрут
 sed -i 's|^route = .*|route = 172.16.0.1/255.255.255.0|' /etc/ocserv/ocserv.conf
 #
 # Пропустить следующие три команды если шаблоны ca и server скидывали в папку /etc/pki/ocserv
@@ -410,11 +413,156 @@ sed -i 's|^ca-cert = .*|ca-cert = /etc/pki/ocserv/cacerts/ca-cert.pem|' /etc/ocs
 systemctl enable --now ocserv
 ```
 
+10. Копируем сертификат ЦС (/etc/pki/ocserv/cacerts/ca.crt) с гостевой ВМ на хостовую машину в домашнюю папку, он клиенту обязательно нужен.
+
 **Настройка клиента:**
 
-1. Устанавливаем пакет `openconnect` (в моем случае установлена Linux Mint): `apt install openconnect`
-2. Запускаем: `openconnect 192.168.10.10`
-3. Вводим логин и пароль: `vagrant/vagrant`
+Все команды ниже не забываем выполнять с повышенными привилегиями (sudo -i).
+
+1. Устанавливаем пакет `openconnect` (в моем случае установлена Linux Mint): `apt install openconnect network-manager-openconnect-gnome`
+2. Запускаем: `openconnect -b --cafile=ca.crt --user=vagrant server.loc`
+   - флаг `-b` позволит запустить клиент в фоне, останавливать через `kill <PID>` (`ps aux | grep openconnect`)
+   - флаг `--cafile=<путь к файлу>` путь к сертификату ЦС
+3. Вводим пароль: `vagrant`
+
+```bash
+root@test-virtual-machine:~# openconnect -b --cafile=/home/test/1/ca.crt --user=vagrant server.loc
+POST https://server.loc/
+Connected to 192.168.10.10:443
+SSL negotiation with server.loc
+Connected to HTTPS on server.loc
+XML POST enabled
+Please enter your username.
+POST https://server.loc/auth
+Please enter your password.
+Password:
+POST https://server.loc/auth
+Got CONNECT response: HTTP/1.1 200 CONNECTED
+CSTP connected. DPD 90, Keepalive 32400
+Connected as 192.168.250.120, using SSL, with DTLS in progress
+Continuing in background; pid 410407
+root@test-virtual-machine:~# Established DTLS connection (using GnuTLS). Ciphersuite (DTLS1.2)-(PSK)-(AES-128-GCM).
+Connect Banner:
+| Welcome to LLC Otus
+
+
+root@test-virtual-machine:~# ip -c a
+...
+59: tun0: <POINTOPOINT,MULTICAST,NOARP,UP,LOWER_UP> mtu 1434 qdisc fq_codel state UNKNOWN group default qlen 500
+    link/none 
+    inet 192.168.250.120/32 scope global tun0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::9daa:99f3:7e65:ceaf/64 scope link stable-privacy 
+       valid_lft forever preferred_lft forever
+root@test-virtual-machine:~# ip ro
+default dev tun0 scope link 
+default via 192.168.182.2 dev ens33 proto dhcp metric 100 
+172.16.0.0/24 dev tun0 proto static scope link metric 50
+192.168.10.0/24 dev vboxnet4 proto kernel scope link src 192.168.10.1 
+192.168.10.10 dev vboxnet4 scope link src 192.168.10.1 
+192.168.182.0/24 dev ens33 proto kernel scope link src 192.168.182.129 metric 100 
+192.168.250.0/24 dev tun0 scope link 
+root@test-virtual-machine:~#
+```
+
+Обращаю внимание что имеется несколько маршрутов по-умолчанию.
+
+Результат работы iperf3 на хостовой машине:
+
+```bash
+root@test-virtual-machine:~# iperf3 -c 192.168.250.1 -t 40 -i 5
+Connecting to host 192.168.250.1, port 5201
+[  5] local 192.168.250.120 port 47944 connected to 192.168.250.1 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  5]   0.00-5.00   sec  80.2 MBytes   134 Mbits/sec   26    107 KBytes       
+[  5]   5.00-10.00  sec  80.5 MBytes   135 Mbits/sec   19    107 KBytes       
+[  5]  10.00-15.00  sec  75.6 MBytes   127 Mbits/sec   15    124 KBytes       
+[  5]  15.00-20.00  sec  76.9 MBytes   129 Mbits/sec   15    112 KBytes       
+[  5]  20.00-25.00  sec  77.1 MBytes   129 Mbits/sec   23    109 KBytes       
+[  5]  25.00-30.00  sec  81.3 MBytes   136 Mbits/sec   19    101 KBytes       
+[  5]  30.00-35.00  sec  85.5 MBytes   143 Mbits/sec   23   95.8 KBytes       
+[  5]  35.00-40.00  sec  87.8 MBytes   147 Mbits/sec   26    108 KBytes       
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-40.00  sec   645 MBytes   135 Mbits/sec  166             sender
+[  5]   0.00-40.00  sec   644 MBytes   135 Mbits/sec                  receiver
+
+iperf Done.
+```
+
+Результат работы iperf3 на `server`:
+
+```bash
+[root@server cacerts]# iperf3 -s &
+[1] 1884
+[root@server cacerts]# -----------------------------------------------------------
+Server listening on 5201
+-----------------------------------------------------------
+Accepted connection from 192.168.250.120, port 47930
+[  5] local 192.168.250.1 port 5201 connected to 192.168.250.120 port 47944
+[ ID] Interval           Transfer     Bandwidth
+[  5]   0.00-1.00   sec  13.8 MBytes   115 Mbits/sec                  
+[  5]   1.00-2.00   sec  14.6 MBytes   123 Mbits/sec                  
+[  5]   2.00-3.00   sec  16.5 MBytes   139 Mbits/sec                  
+[  5]   3.00-4.00   sec  17.6 MBytes   147 Mbits/sec                  
+[  5]   4.00-5.00   sec  16.9 MBytes   141 Mbits/sec                  
+[  5]   5.00-6.00   sec  17.5 MBytes   147 Mbits/sec                  
+[  5]   6.00-7.00   sec  17.1 MBytes   144 Mbits/sec                  
+[  5]   7.00-8.00   sec  16.5 MBytes   138 Mbits/sec                  
+[  5]   8.00-9.00   sec  14.6 MBytes   122 Mbits/sec                  
+[  5]   9.00-10.00  sec  14.7 MBytes   123 Mbits/sec                  
+[  5]  10.00-11.01  sec  14.5 MBytes   122 Mbits/sec                  
+[  5]  11.01-12.00  sec  15.0 MBytes   126 Mbits/sec                  
+[  5]  12.00-13.00  sec  15.4 MBytes   129 Mbits/sec                  
+[  5]  13.00-14.00  sec  15.4 MBytes   130 Mbits/sec                  
+[  5]  14.00-15.00  sec  15.4 MBytes   129 Mbits/sec                  
+[  5]  15.00-16.01  sec  15.4 MBytes   128 Mbits/sec                  
+[  5]  16.01-17.00  sec  15.2 MBytes   128 Mbits/sec                  
+[  5]  17.00-18.00  sec  15.6 MBytes   130 Mbits/sec                  
+[  5]  18.00-19.01  sec  15.2 MBytes   126 Mbits/sec                  
+[  5]  19.01-20.00  sec  15.4 MBytes   130 Mbits/sec                  
+[  5]  20.00-21.00  sec  15.8 MBytes   133 Mbits/sec                  
+[  5]  21.00-22.00  sec  15.3 MBytes   129 Mbits/sec                  
+[  5]  22.00-23.01  sec  15.2 MBytes   127 Mbits/sec                  
+[  5]  23.01-24.01  sec  15.5 MBytes   130 Mbits/sec                  
+[  5]  24.01-25.01  sec  15.6 MBytes   131 Mbits/sec                  
+[  5]  25.01-26.00  sec  15.2 MBytes   128 Mbits/sec                  
+[  5]  26.00-27.01  sec  16.2 MBytes   136 Mbits/sec                  
+[  5]  27.01-28.00  sec  16.0 MBytes   135 Mbits/sec                  
+[  5]  28.00-29.00  sec  15.5 MBytes   130 Mbits/sec                  
+[  5]  29.00-30.00  sec  18.0 MBytes   151 Mbits/sec                  
+[  5]  30.00-31.01  sec  18.5 MBytes   154 Mbits/sec                  
+[  5]  31.01-32.01  sec  16.9 MBytes   142 Mbits/sec                  
+[  5]  32.01-33.00  sec  17.2 MBytes   145 Mbits/sec                  
+[  5]  33.00-34.00  sec  15.5 MBytes   130 Mbits/sec                  
+[  5]  34.00-35.00  sec  17.6 MBytes   149 Mbits/sec                  
+[  5]  35.00-36.01  sec  17.5 MBytes   146 Mbits/sec                  
+[  5]  36.01-37.00  sec  17.3 MBytes   146 Mbits/sec                  
+[  5]  37.00-38.00  sec  17.8 MBytes   149 Mbits/sec                  
+[  5]  38.00-39.00  sec  17.4 MBytes   146 Mbits/sec                  
+[  5]  39.00-40.00  sec  17.8 MBytes   149 Mbits/sec                  
+[  5]  40.00-40.04  sec   603 KBytes   129 Mbits/sec                  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bandwidth
+[  5]   0.00-40.04  sec  0.00 Bytes  0.00 bits/sec                  sender
+[  5]   0.00-40.04  sec   644 MBytes   135 Mbits/sec                  receiver
+```
+
+Настройка плагина network-manager-openconnect:
+
+![image](https://raw.githubusercontent.com/mmmex/vpn/master/ocserv/screen1.png)
+
+Процесс авторизации:
+
+![image](https://raw.githubusercontent.com/mmmex/vpn/master/ocserv/screen2.png)
+
+Уведомление при подключении:
+
+![image](https://raw.githubusercontent.com/mmmex/vpn/master/ocserv/screen3.png)
+
+
+
+[Полезная ссылка](https://ocserv.gitlab.io/www/manual.html)
 
 #### Техническая информация OpenConnect VPN Server
 
@@ -466,7 +614,7 @@ VPN-сервер OpenConnect — это VPN-сервер интернет-уро
 
 Обратите внимание, что поддерживаемое сжатие намеренно не имеет состояния, чтобы IP-пакеты из несвязанных источников не влияли на размер друг друга. Это не предотвратит [все атаки с восстановлением открытого текста, использующие сжатие](http://security.blogoverflow.com/2012/09/how-can-you-protect-yourself-from-crime-beasts-successor/), но предотвратит легкое использование настроек VPN. Критическим фактором при использовании сжатия для восстановления открытого текста зашифрованных данных является возможность объединения данных злоумышленника с законными данными. Если вы не уверены в ценности и характере передаваемых данных, всегда безопасно отключить сжатие (по умолчанию на этом сервере).
 
-![image](https://raw.githubusercontent.com/mmmex/vpn/master/design.png)
+![image](https://raw.githubusercontent.com/mmmex/vpn/master/ocserv/design.png)
 
 ---
 
