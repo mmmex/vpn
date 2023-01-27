@@ -560,7 +560,7 @@ Accepted connection from 192.168.250.120, port 47930
 
 ![image](https://raw.githubusercontent.com/mmmex/vpn/master/ocserv/screen3.png)
 
-
+Базовая настройка окончена.
 
 [Полезная ссылка](https://ocserv.gitlab.io/www/manual.html)
 
