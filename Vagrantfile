@@ -11,8 +11,8 @@ Vagrant.configure(2) do |config|
     client.vm.network "private_network", ip: "192.168.10.20"
     end
     config.vm.provision "ansible" do |ansible|
-        ansible.playbook = "openvpn/provision.yml"
-        ansible.inventory_path = "openvpn/hosts"
+        ansible.playbook = "ansible/provision.yml"
+        ansible.inventory_path = "ansible/hosts"
         ansible.host_key_checking = "false"
         #ansible.limit = "all"
       end

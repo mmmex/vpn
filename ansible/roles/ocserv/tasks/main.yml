@@ -1,0 +1,58 @@
+---
+- name: Install EPEL
+  yum:
+    name: epel-release
+    state: present
+
+- name: Install ocserv
+  yum:
+    name: ocserv
+    state: present
+
+- name: Copy modification ocserv-genkey utility
+  copy:
+    src: 'ocserv-genkey'
+    dest: '/usr/sbin/ocserv-genkey'
+    mode: u=rwx,g=rx,o=x
+
+- name: Setup forward net.ipv4.conf.all.forwarding
+  ansible.builtin.sysctl:
+    name: net.ipv4.conf.all.forwarding
+    value: "1"
+    sysctl_set: yes
+    state: present
+    reload: yes
+
+- name: Setup forward net.ipv4.ip_forward
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes 
+
+- name: Create ca.tmpl
+  template:
+    src: 'ca.j2'
+    dest: '/etc/pki/ocserv/ca.tmpl'
+
+- name: Create server.tmpl
+  template:
+    src: 'server.j2'
+    dest: '/etc/pki/ocserv/server.tmpl'
+
+- name: Create ocserv.conf
+  template:
+    src: 'ocserv.j2'
+    dest: '/etc/ocserv/ocserv.conf'
+
+- name: Enable and start unit ocserv
+  systemd:
+    name: ocserv
+    enabled: yes
+    state: started
+
+- name: Copy CA cert to host
+  fetch:
+    src: '/etc/pki/ocserv/cacerts/ca.crt'
+    dest: '/tmp' 

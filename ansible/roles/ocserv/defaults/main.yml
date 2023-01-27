@@ -1,0 +1,7 @@
+---
+ocserv_ca_tmpl_cn: "Otus CA"
+ocserv_server_tmpl_cn: "server.loc"
+ocserv_orgunit: "LLC Otus"
+ocserv_server_hostname: "server.loc"
+cserv_pool_address: "192.168.250.0/24"
+...
