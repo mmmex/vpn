@@ -426,11 +426,12 @@ systemctl enable --now ocserv
 Все команды ниже не забываем выполнять с повышенными привилегиями (sudo -i).
 
 1. Устанавливаем пакет `openconnect` (в моем случае установлена Linux Mint): `apt install openconnect network-manager-openconnect-gnome`
-2. Следующий шаг можно пропустить, усли выполнялась работа скрипта [playbook](ansible/ocserv-setup.yml),  запуск осуществляем так: `openconnect -b --cafile=/tmp/etc/pki/ocserv/cacerts/ca.crt --user=vagrant server.loc`
-2а. Запускаем: `openconnect -b --cafile=ca.crt --user=vagrant server.loc`
+2. Следующий шаг можно пропустить, усли выполнялась работа скрипта [playbook](ansible/ocserv-setup.yml),  запуск осуществляем так: 
+`openconnect -b --cafile=/tmp/server/etc/pki/ocserv/cacerts/ca.crt --user=vagrant server.loc`
+3. Запускаем: `openconnect -b --cafile=ca.crt --user=vagrant server.loc`
     - флаг `-b` позволит запустить клиент в фоне, останавливать через `kill <PID>` (`ps aux | grep openconnect`)
     - флаг `--cafile=<путь к файлу>` путь к сертификату ЦС
-3. Вводим пароль: `vagrant`
+4. Вводим пароль: `vagrant`
 
 ```bash
 root@test-virtual-machine:~# openconnect -b --cafile=/home/test/1/ca.crt --user=vagrant server.loc
